@@ -9,24 +9,26 @@
 #include "udpSocket/udpSocket.hpp"
 
 int main(int ac, char **av) {
-  std::unique_ptr<UdpSocket> server = std::make_unique<UdpSocket>();
-  std::vector<std::byte> buffer(1024);
+  std::unique_ptr<TcpSocket> server = std::make_unique<TcpSocket>();
+  std::vector<uint8_t> buffer(1024);
 
-  std::error_code err = server->bind({"0.0.0.0", 8080});
-  if (err) {
-    std::cerr << "Error binding socket: " << err.message() << std::endl;
+  server->bind({"0.0.0.0", 8080});
+  server->listen();
+  if (auto client = server->accept(); client) {
+    while (true) {
+      auto res = client->receive(buffer.data(), buffer.size());
+      if (!res) {
+        if (res.error() == Socket::SocketStatus::Disconnected) {
+          std::cout << "Connection closed" << std::endl;
+          break;
+        }
+      }
+      if (res.value() > 0)
+        std::cout << "Received: " << buffer.data() << std::endl;
+    }
+  } else {
+    std::cerr << "Failed to accept client" << std::endl;
     return 1;
   }
-  auto result = server->receive(std::span{buffer});
-  if (!result) {
-    std::cerr << "Error receiving data: " << static_cast<int>(result.error()) << std::endl;
-    return 1;
-  }
-  std::cout << "Received " << result.value() << " bytes from client" << std::endl;
-  std::string_view msg(reinterpret_cast<const char *>(buffer.data()), result.value());
-  std::cout << "Received message: " << msg << std::endl;
-
-  server->close();
-  std::cout << "Closed connection" << std::endl;
   return 0;
 }

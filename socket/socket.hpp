@@ -59,49 +59,8 @@ class Socket {
   std::error_code setBlocking(bool enabled);
   std::error_code setReuse(bool enabled);
 
-  template <typename T>
-    requires std::is_trivially_copyable_v<T> && std::is_standard_layout_v<T>
-  std::expected<size_t, std::error_code> send(std::span<T> data, size_t size) {
-    if (!_connected) return std::unexpected(make_error_code(std::errc::not_connected));
-    ssize_t sent = ::send(_sock, reinterpret_cast<char *>(data.data()), size, 0);
-
-    if (sent == -1) {
-#ifdef _WIN32
-      int err = WSAGetLastError();
-
-      if (err == WSAEWOULDBLOCK)
-        return std::unexpected(std::make_error_code(std::errc::resource_unavailable_try_again));
-      return std::unexpected(std::error_code(err, std::system_category()));
-#else
-      if (errno == EWOULDBLOCK || errno == EAGAIN)
-        return std::unexpected(std::make_error_code(std::errc::resource_unavailable_try_again));
-      return std::unexpected(std::error_code(errno, std::system_category()));
-#endif
-    }
-    return sent;
-  }
-
-  template <typename T>
-    requires std::is_trivially_copyable_v<T> && std::is_standard_layout_v<T>
-  std::expected<size_t, SocketStatus> receive(std::span<T> buffer) {
-    if (!_connected) return std::unexpected(SocketStatus::Disconnected);
-    ssize_t received = ::recv(_sock, reinterpret_cast<char *>(buffer.data()), buffer.size_bytes(), 0);
-
-    if (received == -1) {
-#ifdef _WIN32
-      int err = WSAGetLastError();
-
-      if (err == WSAEWOULDBLOCK) return std::unexpected(SocketStatus::NotReady);
-      if (err == WSAECONNRESET) return std::unexpected(SocketStatus::Disconnected);
-      return std::unexpected(SocketStatus::Error);
-#else
-      if (errno == EWOULDBLOCK || errno == EAGAIN) return std::unexpected(SocketStatus::NotReady);
-      if (errno == ECONNRESET) return std::unexpected(SocketStatus::Disconnected);
-      return std::unexpected(SocketStatus::Error);
-#endif
-    }
-    return received;
-  }
+  std::expected<size_t, std::error_code> send(const void* data, size_t size);
+  std::expected<size_t, SocketStatus> receive(void* buffer, size_t size);
 
  protected:
   Socket(SocketType type);
