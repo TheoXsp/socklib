@@ -120,7 +120,10 @@ std::expected<size_t, Socket::SocketStatus> Socket::receive(void* data, size_t s
     int err = WSAGetLastError();
 
     if (err == WSAEWOULDBLOCK) return std::unexpected(SocketStatus::NotReady);
-    if (err == WSAECONNRESET) return std::unexpected(SocketStatus::Disconnected);
+    if (err == WSAECONNRESET || err == WSAECONNABORTED) {
+      close();
+      return std::unexpected(SocketStatus::Disconnected);
+    }
     return std::unexpected(SocketStatus::Error);
 #else
     if (errno == EWOULDBLOCK || errno == EAGAIN) return std::unexpected(SocketStatus::NotReady);
