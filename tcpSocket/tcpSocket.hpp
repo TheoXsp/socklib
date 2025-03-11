@@ -13,6 +13,9 @@ class TcpSocket : public Socket {
   std::error_code listen();
   std::expected<TcpSocket, std::error_code> accept();
 
+  const Endpoint& getLocalEndpoint() const;
+  const Endpoint& getRemoteEndpoint() const;
+
  private:
   bool _listening;
 };

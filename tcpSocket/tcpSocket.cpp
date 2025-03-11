@@ -24,3 +24,7 @@ std::expected<TcpSocket, std::error_code> TcpSocket::accept() {
   if (clientId == INVALID_SOCK) return std::unexpected(std::make_error_code(std::errc::operation_not_permitted));
   return TcpSocket{std::move(clientId)};
 }
+
+const Socket::Endpoint& TcpSocket::getLocalEndpoint() const { return _localEndpoint; }
+
+const Socket::Endpoint& TcpSocket::getRemoteEndpoint() const { return _remoteEndpoint; }
